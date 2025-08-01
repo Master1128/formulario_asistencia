@@ -13,14 +13,13 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            /* CAMBIO: Se ajustó el degradado a tonos de azul oscuro */
             background: linear-gradient(45deg, #0d253f, #02102a);
             color: #f0f0f0;
         }
         #form-container, #success-container {
             width: 100%;
             max-width: 400px;
-            background: rgba(255, 255, 255, 0.08); /* Ligero ajuste para el nuevo fondo */
+            background: rgba(255, 255, 255, 0.08);
             padding: 30px;
             border-radius: 16px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
@@ -55,12 +54,12 @@
         }
         input:focus {
             outline: none;
-            border-color: #00aaff; /* Un azul brillante para el foco */
+            border-color: #00aaff;
         }
         button {
             width: 100%;
             padding: 12px;
-            background: #00aaff; /* Botón con color azul brillante */
+            background: #00aaff;
             color: #ffffff;
             border: none;
             border-radius: 8px;
@@ -107,7 +106,7 @@
         const formContainer = document.getElementById('form-container');
         const successContainer = document.getElementById('success-container');
 
-        const webhookUrl = "https://automatizaciones-n8n.2jmb0z.easypanel.host/webhook/form"; // <-- NO OLVIDES REEMPLAZAR ESTO
+        const webhookUrl = "URL_DE_TU_WEBHOOK_DE_N8N"; // <-- NO OLVIDES REEMPLAZAR ESTO
 
         submitBtn.addEventListener('click', () => {
             if (!nombreInput.value) {
@@ -116,9 +115,19 @@
                 return;
             }
             submitBtn.disabled = true;
-            statusDiv.textContent = "Obteniendo ubicación...";
+            statusDiv.textContent = "Obteniendo ubicación precisa..."; // Mensaje actualizado
             statusDiv.style.color = "#fff176";
-            navigator.geolocation.getCurrentPosition(onSuccess, onError);
+
+            // --- INICIO DEL CAMBIO ---
+            // Opciones para solicitar la máxima precisión al GPS
+            const options = {
+              enableHighAccuracy: true, // ¡Esta es la clave!
+              timeout: 15000,           // Tiempo máximo de espera: 15 segundos
+              maximumAge: 0             // No usar una ubicación antigua en caché
+            };
+            
+            navigator.geolocation.getCurrentPosition(onSuccess, onError, options); // Se añaden las opciones a la llamada
+            // --- FIN DEL CAMBIO ---
         });
 
         function onSuccess(position) {
@@ -147,8 +156,9 @@
                 submitBtn.disabled = false;
             });
         }
-        function onError() {
-            statusDiv.textContent = "No se pudo obtener la ubicación. Asegúrate de dar permiso.";
+        function onError(error) {
+            // Se puede mostrar un error más específico
+            statusDiv.textContent = `Error: ${error.message}`;
             statusDiv.style.color = "#ffcdd2";
             submitBtn.disabled = false;
         }
