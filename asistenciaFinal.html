@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Asistencia</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            /* CAMBIO: Se ajustó el degradado a tonos de azul oscuro */
+            background: linear-gradient(45deg, #0d253f, #02102a);
+            color: #f0f0f0;
+        }
+        #form-container, #success-container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.08); /* Ligero ajuste para el nuevo fondo */
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            text-align: center;
+        }
+        h1, h2 {
+            color: #ffffff;
+            text-align: center;
+        }
+        label {
+            font-weight: bold;
+            margin-top: 15px;
+            display: block;
+            text-align: left;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin-top: 8px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            box-sizing: border-box;
+            color: #ffffff;
+            font-size: 16px;
+        }
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        input:focus {
+            outline: none;
+            border-color: #00aaff; /* Un azul brillante para el foco */
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #00aaff; /* Botón con color azul brillante */
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 25px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0088cc;
+        }
+        button:disabled {
+            background-color: #5a5a5a;
+            cursor: not-allowed;
+        }
+        #status {
+            text-align: center;
+            margin-top: 15px;
+            font-weight: bold;
+            min-height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="main-content">
+        <div id="form-container">
+            <h1>Control de Asistencia</h1>
+            <label for="nombre">Nombre Completo:</label>
+            <input type="text" id="nombre" name="nombre" required placeholder="Escribe tu nombre aquí">
+            <button id="submitBtn">Registrar Asistencia</button>
+            <p id="status"></p>
+        </div>
+        <div id="success-container" style="display: none;">
+            <h2>¡Gracias!</h2>
+            <p>Tu asistencia ha sido registrada con éxito.</p>
+        </div>
+    </div>
+
+    <script>
+        const submitBtn = document.getElementById('submitBtn');
+        const statusDiv = document.getElementById('status');
+        const nombreInput = document.getElementById('nombre');
+        const formContainer = document.getElementById('form-container');
+        const successContainer = document.getElementById('success-container');
+
+        const webhookUrl = "https://automatizaciones-n8n.2jmb0z.easypanel.host/webhook/form"; // <-- NO OLVIDES REEMPLAZAR ESTO
+
+        submitBtn.addEventListener('click', () => {
+            if (!nombreInput.value) {
+                statusDiv.textContent = "Por favor, ingresa tu nombre.";
+                statusDiv.style.color = "#ffcdd2";
+                return;
+            }
+            submitBtn.disabled = true;
+            statusDiv.textContent = "Obteniendo ubicación...";
+            statusDiv.style.color = "#fff176";
+            navigator.geolocation.getCurrentPosition(onSuccess, onError);
+        });
+
+        function onSuccess(position) {
+            statusDiv.textContent = "Ubicación obtenida. Enviando...";
+            statusDiv.style.color = "#c8e6c9";
+            const data = {
+                nombre: nombreInput.value.trim(),
+                latitud: position.coords.latitude,
+                longitud: position.coords.longitude,
+                ubicacion_maps: `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`
+            };
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    formContainer.style.display = 'none';
+                    successContainer.style.display = 'block';
+                } else { throw new Error('Error al enviar.'); }
+            })
+            .catch(() => {
+                statusDiv.textContent = "Error al registrar. Intenta de nuevo.";
+                statusDiv.style.color = "#ffcdd2";
+                submitBtn.disabled = false;
+            });
+        }
+        function onError() {
+            statusDiv.textContent = "No se pudo obtener la ubicación. Asegúrate de dar permiso.";
+            statusDiv.style.color = "#ffcdd2";
+            submitBtn.disabled = false;
+        }
+    </script>
+</body>
+</html>
