@@ -49,9 +49,6 @@
             color: #ffffff;
             font-size: 16px;
         }
-        input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
         input:focus {
             outline: none;
             border-color: #00aaff;
@@ -82,15 +79,44 @@
             font-weight: bold;
             min-height: 20px;
         }
+        /* Estilos para la cámara */
+        #camera-container {
+            display: none;
+            margin-top: 15px;
+            position: relative;
+        }
+        #camera-view {
+            width: 100%;
+            border-radius: 8px;
+        }
+        #captureBtn {
+            background-color: #28a745;
+        }
+        #captureBtn:hover {
+            background-color: #218838;
+        }
     </style>
 </head>
 <body>
     <div id="main-content">
         <div id="form-container">
-            <h1>Control de Asistencia</h1>
-            <label for="nombre">Nombre Completo:</label>
-            <input type="text" id="nombre" name="nombre" required placeholder="Escribe tu nombre aquí">
-            <button id="submitBtn">Registrar Asistencia</button>
+            <h1>Control de Asistencia Solutronic</h1>
+            
+            <div id="user-inputs">
+                <label for="nombre">Nombre Completo:</label>
+                <input type="text" id="nombre" name="nombre" required placeholder="Escribe tu nombre aquí">
+                
+                <label for="cedula">Cédula de Ciudadanía:</label>
+                <input type="number" id="cedula" name="cedula" required placeholder="Escribe tu número de cédula">
+                <button id="startBtn">Activar Cámara para Registrar</button>
+            </div>
+            
+            <div id="camera-container">
+                <video id="camera-view" autoplay playsinline></video>
+                <canvas id="camera-snapshot" style="display:none;"></canvas>
+                <button id="captureBtn">Tomar Foto y Registrar</button>
+            </div>
+
             <p id="status"></p>
         </div>
         <div id="success-container" style="display: none;">
@@ -100,45 +126,74 @@
     </div>
 
     <script>
-        const submitBtn = document.getElementById('submitBtn');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
         const statusDiv = document.getElementById('status');
         const nombreInput = document.getElementById('nombre');
+        const cedulaInput = document.getElementById('cedula');
+        
+        const userInputs = document.getElementById('user-inputs');
+        const cameraContainer = document.getElementById('camera-container');
+        const video = document.getElementById('camera-view');
+        const canvas = document.getElementById('camera-snapshot');
+
         const formContainer = document.getElementById('form-container');
         const successContainer = document.getElementById('success-container');
+        
+        const webhookUrl = "URL_DE_TU_WEBHOOK_DE_N8N";
 
-        const webhookUrl = "https://automatizaciones-n8n.2jmb0z.easypanel.host/webhook/form"; // <-- NO OLVIDES REEMPLAZAR ESTO
-
-        submitBtn.addEventListener('click', () => {
-            if (!nombreInput.value) {
-                statusDiv.textContent = "Por favor, ingresa tu nombre.";
+        startBtn.addEventListener('click', async () => {
+            if (!nombreInput.value || !cedulaInput.value) {
+                statusDiv.textContent = "Por favor, completa nombre y cédula primero.";
                 statusDiv.style.color = "#ffcdd2";
                 return;
             }
-            submitBtn.disabled = true;
-            statusDiv.textContent = "Obteniendo ubicación precisa..."; // Mensaje actualizado
-            statusDiv.style.color = "#fff176";
-
-            // --- INICIO DEL CAMBIO ---
-            // Opciones para solicitar la máxima precisión al GPS
-            const options = {
-              enableHighAccuracy: true, // ¡Esta es la clave!
-              timeout: 15000,           // Tiempo máximo de espera: 15 segundos
-              maximumAge: 0             // No usar una ubicación antigua en caché
-            };
-            
-            navigator.geolocation.getCurrentPosition(onSuccess, onError, options); // Se añaden las opciones a la llamada
-            // --- FIN DEL CAMBIO ---
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                video.srcObject = stream;
+                userInputs.style.display = 'none';
+                cameraContainer.style.display = 'block';
+                statusDiv.textContent = "Sonríe y toma la foto.";
+            } catch (err) {
+                statusDiv.textContent = "No se pudo acceder a la cámara. Revisa los permisos.";
+                statusDiv.style.color = "#ffcdd2";
+            }
         });
 
-        function onSuccess(position) {
-            statusDiv.textContent = "Ubicación obtenida. Enviando...";
+        captureBtn.addEventListener('click', () => {
+            statusDiv.textContent = "Capturando...";
+            captureBtn.disabled = true;
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8); // Imagen en formato Base64
+
+            video.srcObject.getTracks().forEach(track => track.stop()); // Apaga la cámara
+
+            statusDiv.textContent = "Obteniendo ubicación precisa...";
+            
+            const options = { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 };
+            navigator.geolocation.getCurrentPosition(
+                (position) => onSuccess(position, imageDataUrl),
+                onError
+            );
+        });
+
+        function onSuccess(position, foto_base64) {
+            statusDiv.textContent = "Ubicación obtenida. Enviando todo...";
             statusDiv.style.color = "#c8e6c9";
+            
             const data = {
                 nombre: nombreInput.value.trim(),
+                cedula: cedulaInput.value,
+                foto_base64: foto_base64, // <-- Aquí va la foto
                 latitud: position.coords.latitude,
                 longitud: position.coords.longitude,
                 ubicacion_maps: `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`
             };
+
             fetch(webhookUrl, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -153,16 +208,14 @@
             .catch(() => {
                 statusDiv.textContent = "Error al registrar. Intenta de nuevo.";
                 statusDiv.style.color = "#ffcdd2";
-                submitBtn.disabled = false;
+                captureBtn.disabled = false;
             });
         }
         function onError(error) {
-            // Se puede mostrar un error más específico
             statusDiv.textContent = `Error: ${error.message}`;
             statusDiv.style.color = "#ffcdd2";
-            submitBtn.disabled = false;
+            captureBtn.disabled = false;
         }
     </script>
 </body>
 </html>
-
