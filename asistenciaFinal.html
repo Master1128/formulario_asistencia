@@ -79,7 +79,6 @@
             font-weight: bold;
             min-height: 20px;
         }
-        /* Estilos para la cámara */
         #camera-container {
             display: none;
             margin-top: 15px;
@@ -100,7 +99,7 @@
 <body>
     <div id="main-content">
         <div id="form-container">
-            <h1>Control de Asistencia Solutronic</h1>
+            <h1>Control de Asistencia</h1>
             
             <div id="user-inputs">
                 <label for="nombre">Nombre Completo:</label>
@@ -108,6 +107,10 @@
                 
                 <label for="cedula">Cédula de Ciudadanía:</label>
                 <input type="number" id="cedula" name="cedula" required placeholder="Escribe tu número de cédula">
+
+                <label for="lugar">Lugar de trabajo:</label>
+                <input type="text" id="lugar" name="lugar" required placeholder="Ej: Oficina, Bodega, Cliente X">
+                
                 <button id="startBtn">Activar Cámara para Registrar</button>
             </div>
             
@@ -131,6 +134,7 @@
         const statusDiv = document.getElementById('status');
         const nombreInput = document.getElementById('nombre');
         const cedulaInput = document.getElementById('cedula');
+        const lugarInput = document.getElementById('lugar'); // <-- Se añade referencia al nuevo campo
         
         const userInputs = document.getElementById('user-inputs');
         const cameraContainer = document.getElementById('camera-container');
@@ -143,8 +147,9 @@
         const webhookUrl = "https://automatizaciones-n8n.2jmb0z.easypanel.host/webhook/form";
 
         startBtn.addEventListener('click', async () => {
-            if (!nombreInput.value || !cedulaInput.value) {
-                statusDiv.textContent = "Por favor, completa nombre y cédula primero.";
+            // <-- Se añade validación para el nuevo campo
+            if (!nombreInput.value || !cedulaInput.value || !lugarInput.value) {
+                statusDiv.textContent = "Por favor, completa todos los campos primero.";
                 statusDiv.style.color = "#ffcdd2";
                 return;
             }
@@ -168,9 +173,9 @@
             canvas.height = video.videoHeight;
             canvas.getContext('2d').drawImage(video, 0, 0);
             
-            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8); // Imagen en formato Base64
+            const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
 
-            video.srcObject.getTracks().forEach(track => track.stop()); // Apaga la cámara
+            video.srcObject.getTracks().forEach(track => track.stop());
 
             statusDiv.textContent = "Obteniendo ubicación precisa...";
             
@@ -188,9 +193,11 @@
             const data = {
                 nombre: nombreInput.value.trim(),
                 cedula: cedulaInput.value,
-                foto_base64: foto_base64, // <-- Aquí va la foto
+                lugar_trabajo: lugarInput.value, // <-- Se añade el nuevo dato para enviarlo
+                foto_base64: foto_base64,
                 latitud: position.coords.latitude,
                 longitud: position.coords.longitude,
+                precision_gps: position.coords.accuracy,
                 ubicacion_maps: `https://www.google.com/maps?q=${position.coords.latitude},${position.coords.longitude}`
             };
 
@@ -219,4 +226,3 @@
     </script>
 </body>
 </html>
-
