@@ -38,7 +38,7 @@
             display: block;
             text-align: left;
         }
-        input {
+        input, textarea { /* Se añade textarea a los estilos */
             width: 100%;
             padding: 12px;
             margin-top: 8px;
@@ -48,8 +48,9 @@
             box-sizing: border-box;
             color: #ffffff;
             font-size: 16px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        input:focus {
+        input:focus, textarea:focus { /* Se añade textarea a los estilos */
             outline: none;
             border-color: #00aaff;
         }
@@ -111,6 +112,9 @@
                 <label for="lugar">Lugar de trabajo:</label>
                 <input type="text" id="lugar" name="lugar" required placeholder="Ej: Oficina, Bodega, Cliente X">
                 
+                <label for="observaciones">Observaciones (Opcional):</label>
+                <textarea id="observaciones" name="observaciones" rows="3" placeholder="Ej: Llegada tarde por cita médica..."></textarea>
+                
                 <button id="startBtn">Activar Cámara para Registrar</button>
             </div>
             
@@ -134,7 +138,8 @@
         const statusDiv = document.getElementById('status');
         const nombreInput = document.getElementById('nombre');
         const cedulaInput = document.getElementById('cedula');
-        const lugarInput = document.getElementById('lugar'); // <-- Se añade referencia al nuevo campo
+        const lugarInput = document.getElementById('lugar');
+        const observacionesInput = document.getElementById('observaciones'); // <-- Se añade referencia
         
         const userInputs = document.getElementById('user-inputs');
         const cameraContainer = document.getElementById('camera-container');
@@ -144,12 +149,12 @@
         const formContainer = document.getElementById('form-container');
         const successContainer = document.getElementById('success-container');
         
-        const webhookUrl = "https://automatizaciones-n8n.2jmb0z.easypanel.host/webhook/form";
+        const webhookUrl = "URL_DE_TU_WEBHOOK_DE_N8N";
 
         startBtn.addEventListener('click', async () => {
-            // <-- Se añade validación para el nuevo campo
+            // <-- Se elimina la validación para el campo opcional
             if (!nombreInput.value || !cedulaInput.value || !lugarInput.value) {
-                statusDiv.textContent = "Por favor, completa todos los campos primero.";
+                statusDiv.textContent = "Por favor, completa los campos obligatorios.";
                 statusDiv.style.color = "#ffcdd2";
                 return;
             }
@@ -193,7 +198,8 @@
             const data = {
                 nombre: nombreInput.value.trim(),
                 cedula: cedulaInput.value,
-                lugar_trabajo: lugarInput.value, // <-- Se añade el nuevo dato para enviarlo
+                lugar_trabajo: lugarInput.value,
+                observaciones: observacionesInput.value, // <-- Se añade el nuevo dato
                 foto_base64: foto_base64,
                 latitud: position.coords.latitude,
                 longitud: position.coords.longitude,
